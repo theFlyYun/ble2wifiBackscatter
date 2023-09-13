@@ -121,6 +121,7 @@ int enable_advertising(int advertising_interval, char *advertising_uuid)
   {
     adv_data_cp.data[adv_data_cp.length + segment_length]  = htobs(uuid[i]); segment_length++; //依次在数组中存储UUID转换成整数的结果，然后更新segment_length
   }
+  adv_data_cp.length += segment_length; // 更新 adv_data_cp.length 的值，表示广播数据的长度
 
   memset(&rq, 0, sizeof(rq));  // 初始化结构体cp内所有成员变量为0
   rq.ogf = OGF_LE_CTL;
