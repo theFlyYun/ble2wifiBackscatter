@@ -114,20 +114,7 @@ int enable_advertising(int advertising_interval, char *advertising_uuid)
   le_set_advertising_data_cp adv_data_cp;  // 定义adv_data_cp结构体变量,用于设置广播数据的内容,结构体类型为 le_set_advertising_data_cp    
   memset(&adv_data_cp, 0, sizeof(adv_data_cp)); // 将 adv_data_cp 的所有成员变量初始化为 0
 
-  uint8_t segment_length = 1;  // 定义名为 segment_length 的变量，用于保存每个段的长度。初始化为 1
-  adv_data_cp.data[adv_data_cp.length + segment_length] = htobs(EIR_FLAGS); segment_length++; // 设置 Flags 段的内容,将Flags的值保存在adv_data_cp.data数组中,更新segment_length
-  adv_data_cp.data[adv_data_cp.length + segment_length] = htobs(0x1A); segment_length++;
-  adv_data_cp.data[adv_data_cp.length] = htobs(segment_length - 1);
-
-  adv_data_cp.length += segment_length;
-
-  segment_length = 1;
-  adv_data_cp.data[adv_data_cp.length + segment_length] = htobs(EIR_MANUFACTURE_SPECIFIC); segment_length++; //将Manufacturer Specific数据的值保存在adv_data_cp.data数组中,更新segment_length
-  adv_data_cp.data[adv_data_cp.length + segment_length] = htobs(0x4C); segment_length++;
-  adv_data_cp.data[adv_data_cp.length + segment_length] = htobs(0x00); segment_length++;
-  adv_data_cp.data[adv_data_cp.length + segment_length] = htobs(0x02); segment_length++;
-  adv_data_cp.data[adv_data_cp.length + segment_length] = htobs(0x15); segment_length++;
-
+  uint8_t segment_length = 0;  // 定义名为 segment_length 的变量，用于保存每个段的长度。初始化为 1
   unsigned int *uuid = uuid_str_to_data(advertising_uuid); // 将UUID字符串(16字节)转换为无符号整数数组，将 UUID 的值保存在 adv_data_cp.data 数组中，并更新 segment_length
   int i;
   for(i=0; i<strlen(advertising_uuid)/2; i++) //for循环遍历UUID字符串的每个字符,每次循环处理两个字符,循环条件是i<strlen(advertising_uuid)/2,因为一个UUID字符占用两个字节
