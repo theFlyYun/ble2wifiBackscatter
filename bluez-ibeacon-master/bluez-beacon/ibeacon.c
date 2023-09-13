@@ -16,11 +16,8 @@
 // 然后将这10位OCF与OGF左移10位后的值进行按位或运算，得到一个16位的命令操作码
 // 作用是将OGF和OCF组合成一个唯一标识某个蓝牙命令的值，方便后续使用这个值进行蓝牙通讯
 #define cmd_opcode_pack(ogf, ocf) (uint16_t)((ocf & 0x03ff)|(ogf << 10)) 
-
-#define EIR_FLAGS                   0X01 //设备的标志位
 #define EIR_NAME_SHORT              0x08 //设备的短名称
 #define EIR_NAME_COMPLETE           0x09 //设备的完整名称
-#define EIR_MANUFACTURE_SPECIFIC    0xFF //表示设备的制造商自定义数据
 
 int global_done = 0; //全局变量，用于判断是否接收到终止广播的信号
 
@@ -50,8 +47,8 @@ unsigned int twoc(int in, int t) // 函数的输入参数为一个有符号整�
 }
 
 // 函数enable_advertising，用于使能蓝牙广播
-// 函数的输入参数有广告间隔、广播 UUID、Major号、Minor号和 RSSI值
-int enable_advertising(int advertising_interval, char *advertising_uuid, int major_number, int minor_number, int rssi_value)
+// 函数的输入参数有广告间隔、广播 UUID
+int enable_advertising(int advertising_interval, char *advertising_uuid)
 {
   int device_id = hci_get_route(NULL);  //获取蓝牙设备ID
 
@@ -117,41 +114,13 @@ int enable_advertising(int advertising_interval, char *advertising_uuid, int maj
   le_set_advertising_data_cp adv_data_cp;  // 定义adv_data_cp结构体变量,用于设置广播数据的内容,结构体类型为 le_set_advertising_data_cp    
   memset(&adv_data_cp, 0, sizeof(adv_data_cp)); // 将 adv_data_cp 的所有成员变量初始化为 0
 
-  uint8_t segment_length = 1;  // 定义名为 segment_length 的变量，用于保存每个段的长度。初始化为 1
-  adv_data_cp.data[adv_data_cp.length + segment_length] = htobs(EIR_FLAGS); segment_length++; // 设置 Flags 段的内容,将Flags的值保存在adv_data_cp.data数组中,更新segment_length
-  adv_data_cp.data[adv_data_cp.length + segment_length] = htobs(0x1A); segment_length++;
-  adv_data_cp.data[adv_data_cp.length] = htobs(segment_length - 1);
-
-  adv_data_cp.length += segment_length;
-
-  segment_length = 1;
-  adv_data_cp.data[adv_data_cp.length + segment_length] = htobs(EIR_MANUFACTURE_SPECIFIC); segment_length++; //将Manufacturer Specific数据的值保存在adv_data_cp.data数组中,更新segment_length
-  adv_data_cp.data[adv_data_cp.length + segment_length] = htobs(0x4C); segment_length++;
-  adv_data_cp.data[adv_data_cp.length + segment_length] = htobs(0x00); segment_length++;
-  adv_data_cp.data[adv_data_cp.length + segment_length] = htobs(0x02); segment_length++;
-  adv_data_cp.data[adv_data_cp.length + segment_length] = htobs(0x15); segment_length++;
-
+  uint8_t segment_length = 0;  // 定义名为 segment_length 的变量，用于保存每个段的长度。初始化为 1
   unsigned int *uuid = uuid_str_to_data(advertising_uuid); // 将UUID字符串(16字节)转换为无符号整数数组，将 UUID 的值保存在 adv_data_cp.data 数组中，并更新 segment_length
   int i;
   for(i=0; i<strlen(advertising_uuid)/2; i++) //for循环遍历UUID字符串的每个字符,每次循环处理两个字符,循环条件是i<strlen(advertising_uuid)/2,因为一个UUID字符占用两个字节
   {
     adv_data_cp.data[adv_data_cp.length + segment_length]  = htobs(uuid[i]); segment_length++; //依次在数组中存储UUID转换成整数的结果，然后更新segment_length
   }
-
-  // Major number (2字节)
-  adv_data_cp.data[adv_data_cp.length + segment_length] = htobs(major_number >> 8 & 0x00FF); segment_length++; // 分离major_number的高8位字节
-  adv_data_cp.data[adv_data_cp.length + segment_length] = htobs(major_number & 0x00FF); segment_length++; // 分离major_number的低8位字节
-
-  // Minor number (2字节)
-  adv_data_cp.data[adv_data_cp.length + segment_length] = htobs(minor_number >> 8 & 0x00FF); segment_length++; // 分离minor_number的高8位字节
-  adv_data_cp.data[adv_data_cp.length + segment_length] = htobs(minor_number & 0x00FF); segment_length++; // 分离minor_number的低8位字节
-
-  // RSSI calibration (信号强度，单位为 dBm)
-  adv_data_cp.data[adv_data_cp.length + segment_length] = htobs(twoc(rssi_value, 8)); segment_length++;
-
-  adv_data_cp.data[adv_data_cp.length] = htobs(segment_length - 1);
-
-  adv_data_cp.length += segment_length;
 
   memset(&rq, 0, sizeof(rq));  // 初始化结构体cp内所有成员变量为0
   rq.ogf = OGF_LE_CTL;
@@ -231,15 +200,15 @@ void ctrlc_handler(int s)
 // 主函数,用于开启广播并等待终止广播
 void main(int argc, char **argv)
 {
-  if(argc != 6) // if语句判断命令行参数的个数是否为6，如果不是，则打印出正确的命令行参数格式，并通过调用exit函数退出程序
+  if(argc != 3) // if语句判断命令行参数的个数是否为6，如果不是，则打印出正确的命令行参数格式，并通过调用exit函数退出程序
   {
-    fprintf(stderr, "Usage: %s <advertisement time in ms> <UUID> <major number> <minor number> <RSSI calibration amount>\n", argv[0]);
+    fprintf(stderr, "Usage: %s <advertisement time in ms> <UUID> \n", argv[0]);
     exit(1);
   }
 
   // 调用enable_advertising函数开启广播,该函数接受五个参数,分别是广播时间（以ms为单位）、UUID、主要号、次要号和RSSI校准量
   // 函数返回一个整型值rc,用于判断广播是否成功开启
-  int rc = enable_advertising(atoi(argv[1]), argv[2], atoi(argv[3]), atoi(argv[4]), atoi(argv[5])); // 用enable_advertising函数开启广播
+  int rc = enable_advertising(atoi(argv[1]), argv[2]); // 用enable_advertising函数开启广播
   if(rc == 0)  //广播成功开启
   {
     struct sigaction sigint_handler; // 创建sigaction结构体变量sigint_handler
