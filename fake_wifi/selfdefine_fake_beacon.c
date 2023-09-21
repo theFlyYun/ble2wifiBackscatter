@@ -142,7 +142,7 @@ int32 send_80211_frame(int32 p_socket, uint8 *p_buffer, uint32 p_size)
     实际传输的 802.11 帧并不包含所谓的 RadioTap 头部。
     */
     // 无线网卡会附上一个radiotap头，以展现与物理层有关的信息，比如功率、速率等
-    uint8 *t_radiotap = (uint8 *)"\x00\x00\x0d\x00\x04\x80\x08\x00\x02\x00\x00\x00\x00";
+    uint8 *t_radiotap = (uint8 *)"\x00\x00\x0d\x00\x04\x80\x02\x00\x02\x00\x00\x00\x00";
     // reversion:8bits 始终为0
     // pad：8bits 始终为0
     // length:8bits 0x0d 整个radiotap的长度
